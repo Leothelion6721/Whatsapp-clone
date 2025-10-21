@@ -5,7 +5,14 @@ const path = require('path');
 
 const app = express();
 const server = http.createServer(app);
-const io = socketIo(server);
+const io = socketIo(server, {
+    cors: {
+        origin: "*",
+        methods: ["GET", "POST"]
+    },
+    transports: ['websocket', 'polling'],
+    allowEIO3: true
+});
 
 // Middleware
 app.use(express.json());
@@ -323,7 +330,8 @@ app.get('/', (req, res) => {
 });
 
 const PORT = process.env.PORT || 3000;
-server.listen(PORT, () => {
-    console.log(`🚀 WhatsApp Clone Server running on http://localhost:${PORT}`);
+server.listen(PORT, '0.0.0.0', () => {
+    console.log(`🚀 WhatsApp Clone Server running on port ${PORT}`);
     console.log(`📱 Open multiple browser tabs to test real-time messaging!`);
+    console.log(`🌍 Environment: ${process.env.NODE_ENV || 'development'}`);
 });

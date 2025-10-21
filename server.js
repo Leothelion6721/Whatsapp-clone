@@ -294,6 +294,86 @@ io.on('connection', (socket) => {
         });
     });
 
+    // WebRTC Voice/Video Call Signaling
+    socket.on('call-user', (data) => {
+        const { targetUserId, offer, callType } = data; // callType: 'voice' or 'video'
+        
+        if (!currentUserId || !targetUserId) return;
+
+        const targetUser = users.get(targetUserId);
+        const caller = users.get(currentUserId);
+
+        if (targetUser && targetUser.online && targetUser.socketId) {
+            io.to(targetUser.socketId).emit('incoming-call', {
+                callerId: currentUserId,
+                callerName: caller?.username || 'Unknown',
+                offer: offer,
+                callType: callType
+            });
+            console.log(`${callType} call initiated from ${caller?.username} to ${targetUser.username}`);
+        }
+    });
+
+    socket.on('answer-call', (data) => {
+        const { callerId, answer } = data;
+        
+        if (!currentUserId || !callerId) return;
+
+        const caller = users.get(callerId);
+
+        if (caller && caller.online && caller.socketId) {
+            io.to(caller.socketId).emit('call-answered', {
+                answer: answer,
+                answererId: currentUserId
+            });
+            console.log(`Call answered by ${users.get(currentUserId)?.username}`);
+        }
+    });
+
+    socket.on('ice-candidate', (data) => {
+        const { targetUserId, candidate } = data;
+        
+        if (!targetUserId) return;
+
+        const targetUser = users.get(targetUserId);
+
+        if (targetUser && targetUser.online && targetUser.socketId) {
+            io.to(targetUser.socketId).emit('ice-candidate', {
+                candidate: candidate,
+                senderId: currentUserId
+            });
+        }
+    });
+
+    socket.on('reject-call', (data) => {
+        const { callerId } = data;
+        
+        if (!callerId) return;
+
+        const caller = users.get(callerId);
+
+        if (caller && caller.online && caller.socketId) {
+            io.to(caller.socketId).emit('call-rejected', {
+                rejecterId: currentUserId
+            });
+            console.log('Call rejected');
+        }
+    });
+
+    socket.on('end-call', (data) => {
+        const { targetUserId } = data;
+        
+        if (!targetUserId) return;
+
+        const targetUser = users.get(targetUserId);
+
+        if (targetUser && targetUser.socketId) {
+            io.to(targetUser.socketId).emit('call-ended', {
+                enderId: currentUserId
+            });
+        }
+    });
+
     // Disconnect
     socket.on('disconnect', () => {
         if (currentUserId) {
